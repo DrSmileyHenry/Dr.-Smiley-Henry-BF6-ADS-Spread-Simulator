@@ -148,6 +148,15 @@
     #plot {
       height: 760px;
     }
+
+    .burst-controls {
+      margin-top: 10px;
+      padding: 12px;
+      background: #1b2442;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+    }
+    .hidden { display: none; }
     .footer {
       margin-top: 12px;
       color: var(--muted);
@@ -183,7 +192,7 @@
 
         <div class="field">
           <label class="inline">
-            <input type="checkbox" id="enableWeaponB" checked />
+            <input type="checkbox" id="enableWeaponB" />
             Compare a second weapon
           </label>
         </div>
@@ -198,7 +207,7 @@
         
 
         <div class="field">
-          <label for="shotsInput">Number of shots</label>
+          <label for="shotsInput" id="shotsLabel">Number of shots</label>
           <div class="shots-row">
             <input type="range" id="shotsInput" value="25" min="2" max="80" step="1" />
             <div class="shot-pill" id="shotsValue">25</div>
@@ -208,7 +217,7 @@
         <div class="section-title">Attachment tier shifts</div>
         <div class="check-grid" id="tierContainer"></div>
         <div class="hint">
-          The addition of Blue/Violet lasers or Light barrels attachments will each decrease your tier by -1 (improves accuracy) Having "ADS Accuracy While Moving" penalty attachments increases your tier by +1 (decreases accuracy). By default, we show the cases: -2,-1, 0, +1.
+          The addition of Blue/Violet lasers or Light barrels attachments will each decrease your tier by -1 (improves accuracy) Having "ADS Accuracy While Moving" penalty attachments increases your tier by +1 (decreases accuracy). By default, only the +0 case is shown.
         </div>
 
         <div class="section-title">Display</div>
@@ -223,6 +232,28 @@
             <input type="checkbox" id="showEffectiveOverlay" />
             Show Effective Spread Increase per Shot
           </label>
+        </div>
+        <div class="field">
+          <label class="inline">
+            <input type="checkbox" id="enableBurstCompare" />
+            Add burst/tap-fire comparison
+          </label>
+        </div>
+        <div id="burstControls" class="burst-controls hidden">
+          <div class="field">
+            <label for="shotsPerBurst">Shots per burst</label>
+            <input type="number" id="shotsPerBurst" min="1" max="20" step="1" value="2" />
+          </div>
+          <div class="field">
+            <label for="waitSlider">Additional time between bursts (s)</label>
+            <div class="shots-row">
+              <input type="range" id="waitSlider" min="0" max="0.5" step="0.005" value="0.04" />
+              <div class="shot-pill" id="waitValue">0.04</div>
+            </div>
+          </div>
+          <div class="hint">
+            Burst compare only affects the spread compare plot. In burst mode, the main shots slider becomes the number of bursts, and the graph still shows pre-shot spread only. The burst wait slider adds extra delay beyond normal shot cadence, so 0.00 s matches the fastest possible re-start.
+          </div>
         </div>
 
         <div class="stats" id="stats"></div>
@@ -240,6 +271,33 @@
 
   <script>
     const WEAPONS = [{"displayname": "18.5KS-K", "RoF": 299.999, "ADSStandBaseMax": 5.0, "ADSBaseSpreadInc": 0.001, "ADSBaseFirstShotMul": 1.0, "ADSBaseSpreadFiringDecCoef": 0.0, "ADSBaseSpreadFiringDecExp": 0.25, "ADSBaseSpreadFiringDecOffset": 6.6, "ADSStandMoveMax": 5.0, "ADSMoveSpreadInc": 0.001, "ADSMoveFirstShotMul": 1.0, "ADSMoveSpreadFiringDecCoef": 0.0, "ADSMoveSpreadFiringDecExp": 0.25, "ADSMoveSpreadFiringDecOffset": 6.6}, {"displayname": "AK-205", "RoF": 719.999, "ADSStandBaseMax": 6.0, "ADSBaseSpreadInc": 0.179, "ADSBaseFirstShotMul": 1.0, "ADSBaseSpreadFiringDecCoef": 1.22, "ADSBaseSpreadFiringDecExp": 2.5, "ADSBaseSpreadFiringDecOffset": 1.84, "ADSStandMoveMax": 7.0, "ADSMoveSpreadInc": 0.179, "ADSMoveFirstShotMul": 1.0, "ADSMoveSpreadFiringDecCoef": 1.22, "ADSMoveSpreadFiringDecExp": 2.5, "ADSMoveSpreadFiringDecOffset": 1.84}, {"displayname": "AK4D", "RoF": 514.285, "ADSStandBaseMax": 7.0, "ADSBaseSpreadInc": 0.392, "ADSBaseFirstShotMul": 1.0, "ADSBaseSpreadFiringDecCoef": 1.22, "ADSBaseSpreadFiringDecExp": 2.5, "ADSBaseSpreadFiringDecOffset": 1.84, "ADSStandMoveMax": 8.0, "ADSMoveSpreadInc": 0.392, "ADSMoveFirstShotMul": 1.0, "ADSMoveSpreadFiringDecCoef": 1.22, "ADSMoveSpreadFiringDecExp": 2.5, "ADSMoveSpreadFiringDecOffset": 1.84}, {"displayname": "B36A4", "RoF": 719.999, "ADSStandBaseMax": 7.0, "ADSBaseSpreadInc": 0.27, "ADSBaseFirstShotMul": 1.0, "ADSBaseSpreadFiringDecCoef": 1.22, "ADSBaseSpreadFiringDecExp": 2.5, "ADSBaseSpreadFiringDecOffset": 1.84, "ADSStandMoveMax": 8.0, "ADSMoveSpreadInc": 0.27, "ADSMoveFirstShotMul": 1.0, "ADSMoveSpreadFiringDecCoef": 1.22, "ADSMoveSpreadFiringDecExp": 2.5, "ADSMoveSpreadFiringDecOffset": 1.84}, {"displayname": "CZ3A1", "RoF": 981.818, "ADSStandBaseMax": 6.0, "ADSBaseSpreadInc": 0.21, "ADSBaseFirstShotMul": 1.0, "ADSBaseSpreadFiringDecCoef": 1.22, "ADSBaseSpreadFiringDecExp": 2.5, "ADSBaseSpreadFiringDecOffset": 1.84, "ADSStandMoveMax": 6.0, "ADSMoveSpreadInc": 0.21, "ADSMoveFirstShotMul": 1.0, "ADSMoveSpreadFiringDecCoef": 1.22, "ADSMoveSpreadFiringDecExp": 2.5, "ADSMoveSpreadFiringDecOffset": 1.84}, {"displayname": "DB-12", "RoF": 359.999, "ADSStandBaseMax": 5.0, "ADSBaseSpreadInc": 0.001, "ADSBaseFirstShotMul": 1.0, "ADSBaseSpreadFiringDecCoef": 0.0, "ADSBaseSpreadFiringDecExp": 0.25, "ADSBaseSpreadFiringDecOffset": 6.6, "ADSStandMoveMax": 5.0, "ADSMoveSpreadInc": 0.001, "ADSMoveFirstShotMul": 1.0, "ADSMoveSpreadFiringDecCoef": 0.0, "ADSMoveSpreadFiringDecExp": 0.25, "ADSMoveSpreadFiringDecOffset": 6.6}, {"displayname": "DRS-IAR", "RoF": 771.428, "ADSStandBaseMax": 9.0, "ADSBaseSpreadInc": 0.27, "ADSBaseFirstShotMul": 1.0, "ADSBaseSpreadFiringDecCoef": 1.22, "ADSBaseSpreadFiringDecExp": 2.5, "ADSBaseSpreadFiringDecOffset": 1.84, "ADSStandMoveMax": 10.0, "ADSMoveSpreadInc": 0.27, "ADSMoveFirstShotMul": 1.0, "ADSMoveSpreadFiringDecCoef": 1.22, "ADSMoveSpreadFiringDecExp": 2.5, "ADSMoveSpreadFiringDecOffset": 1.84}, {"displayname": "ES 5.7", "RoF": 449.999, "ADSStandBaseMax": 6.0, "ADSBaseSpreadInc": 0.0, "ADSBaseFirstShotMul": 1.0, "ADSBaseSpreadFiringDecCoef": 0.0, "ADSBaseSpreadFiringDecExp": 0.25, "ADSBaseSpreadFiringDecOffset": 6.6, "ADSStandMoveMax": 6.0, "ADSMoveSpreadInc": 0.0, "ADSMoveFirstShotMul": 1.0, "ADSMoveSpreadFiringDecCoef": 0.0, "ADSMoveSpreadFiringDecExp": 0.25, "ADSMoveSpreadFiringDecOffset": 6.6}, {"displayname": "GGH-22", "RoF": 359.999, "ADSStandBaseMax": 6.0, "ADSBaseSpreadInc": 0.0, "ADSBaseFirstShotMul": 1.0, "ADSBaseSpreadFiringDecCoef": 0.0, "ADSBaseSpreadFiringDecExp": 0.25, "ADSBaseSpreadFiringDecOffset": 6.6, "ADSStandMoveMax": 6.0, "ADSMoveSpreadInc": 0.0, "ADSMoveFirstShotMul": 1.0, "ADSMoveSpreadFiringDecCoef": 0.0, "ADSMoveSpreadFiringDecExp": 0.25, "ADSMoveSpreadFiringDecOffset": 6.6}, {"displayname": "GRT-BC", "RoF": 830.769, "ADSStandBaseMax": 6.0, "ADSBaseSpreadInc": 0.228, "ADSBaseFirstShotMul": 1.0, "ADSBaseSpreadFiringDecCoef": 1.22, "ADSBaseSpreadFiringDecExp": 2.5, "ADSBaseSpreadFiringDecOffset": 1.84, "ADSStandMoveMax": 7.0, "ADSMoveSpreadInc": 0.228, "ADSMoveFirstShotMul": 1.0, "ADSMoveSpreadFiringDecCoef": 1.22, "ADSMoveSpreadFiringDecExp": 2.5, "ADSMoveSpreadFiringDecOffset": 1.84}, {"displayname": "GRT-CPS", "RoF": 359.999, "ADSStandBaseMax": 9.0, "ADSBaseSpreadInc": 0.0, "ADSBaseFirstShotMul": 1.0, "ADSBaseSpreadFiringDecCoef": 0.0, "ADSBaseSpreadFiringDecExp": 0.25, "ADSBaseSpreadFiringDecOffset": 6.6, "ADSStandMoveMax": 10.0, "ADSMoveSpreadInc": 0.0, "ADSMoveFirstShotMul": 1.0, "ADSMoveSpreadFiringDecCoef": 0.0, "ADSMoveSpreadFiringDecExp": 0.25, "ADSMoveSpreadFiringDecOffset": 6.6}, {"displayname": "KORD 6P67", "RoF": 899.999, "ADSStandBaseMax": 7.0, "ADSBaseSpreadInc": 0.21, "ADSBaseFirstShotMul": 1.0, "ADSBaseSpreadFiringDecCoef": 1.22, "ADSBaseSpreadFiringDecExp": 2.5, "ADSBaseSpreadFiringDecOffset": 1.84, "ADSStandMoveMax": 8.0, "ADSMoveSpreadInc": 0.21, "ADSMoveFirstShotMul": 1.0, "ADSMoveSpreadFiringDecCoef": 1.22, "ADSMoveSpreadFiringDecExp": 2.5, "ADSMoveSpreadFiringDecOffset": 1.84}, {"displayname": "KTS100 MK8", "RoF": 514.285, "ADSStandBaseMax": 9.0, "ADSBaseSpreadInc": 0.27, "ADSBaseFirstShotMul": 1.0, "ADSBaseSpreadFiringDecCoef": 1.22, "ADSBaseSpreadFiringDecExp": 2.5, "ADSBaseSpreadFiringDecOffset": 1.84, "ADSStandMoveMax": 10.0, "ADSMoveSpreadInc": 0.27, "ADSMoveFirstShotMul": 1.0, "ADSMoveSpreadFiringDecCoef": 1.22, "ADSMoveSpreadFiringDecExp": 2.5, "ADSMoveSpreadFiringDecOffset": 1.84}, {"displayname": "KV9", "RoF": 1079.999, "ADSStandBaseMax": 6.0, "ADSBaseSpreadInc": 0.21, "ADSBaseFirstShotMul": 1.0, "ADSBaseSpreadFiringDecCoef": 1.22, "ADSBaseSpreadFiringDecExp": 2.5, "ADSBaseSpreadFiringDecOffset": 1.84, "ADSStandMoveMax": 6.0, "ADSMoveSpreadInc": 0.21, "ADSMoveFirstShotMul": 1.0, "ADSMoveSpreadFiringDecCoef": 1.22, "ADSMoveSpreadFiringDecExp": 2.5, "ADSMoveSpreadFiringDecOffset": 1.84}, {"displayname": "L110", "RoF": 719.999, "ADSStandBaseMax": 11.0, "ADSBaseSpreadInc": 0.27, "ADSBaseFirstShotMul": 1.0, "ADSBaseSpreadFiringDecCoef": 1.22, "ADSBaseSpreadFiringDecExp": 2.5, "ADSBaseSpreadFiringDecOffset": 1.84, "ADSStandMoveMax": 13.0, "ADSMoveSpreadInc": 0.27, "ADSMoveFirstShotMul": 1.0, "ADSMoveSpreadFiringDecCoef": 1.22, "ADSMoveSpreadFiringDecExp": 2.5, "ADSMoveSpreadFiringDecOffset": 1.84}, {"displayname": "L85A3", "RoF": 635.294, "ADSStandBaseMax": 7.0, "ADSBaseSpreadInc": 0.27, "ADSBaseFirstShotMul": 1.0, "ADSBaseSpreadFiringDecCoef": 1.22, "ADSBaseSpreadFiringDecExp": 2.5, "ADSBaseSpreadFiringDecOffset": 1.84, "ADSStandMoveMax": 8.0, "ADSMoveSpreadInc": 0.27, "ADSMoveFirstShotMul": 1.0, "ADSMoveSpreadFiringDecCoef": 1.22, "ADSMoveSpreadFiringDecExp": 2.5, "ADSMoveSpreadFiringDecOffset": 1.84}, {"displayname": "LMR27", "RoF": 449.999, "ADSStandBaseMax": 7.0, "ADSBaseSpreadInc": 0.0, "ADSBaseFirstShotMul": 1.0, "ADSBaseSpreadFiringDecCoef": 0.0, "ADSBaseSpreadFiringDecExp": 0.25, "ADSBaseSpreadFiringDecOffset": 6.6, "ADSStandMoveMax": 8.0, "ADSMoveSpreadInc": 0.0, "ADSMoveFirstShotMul": 1.0, "ADSMoveSpreadFiringDecCoef": 0.0, "ADSMoveSpreadFiringDecExp": 0.25, "ADSMoveSpreadFiringDecOffset": 6.6}, {"displayname": "M/60", "RoF": 514.285, "ADSStandBaseMax": 11.0, "ADSBaseSpreadInc": 0.392, "ADSBaseFirstShotMul": 1.0, "ADSBaseSpreadFiringDecCoef": 1.22, "ADSBaseSpreadFiringDecExp": 2.5, "ADSBaseSpreadFiringDecOffset": 1.84, "ADSStandMoveMax": 13.0, "ADSMoveSpreadInc": 0.392, "ADSMoveFirstShotMul": 1.0, "ADSMoveSpreadFiringDecCoef": 1.22, "ADSMoveSpreadFiringDecExp": 2.5, "ADSMoveSpreadFiringDecOffset": 1.84}, {"displayname": "M1014", "RoF": 199.999, "ADSStandBaseMax": 5.0, "ADSBaseSpreadInc": 0.001, "ADSBaseFirstShotMul": 1.0, "ADSBaseSpreadFiringDecCoef": 0.0, "ADSBaseSpreadFiringDecExp": 0.25, "ADSBaseSpreadFiringDecOffset": 6.6, "ADSStandMoveMax": 5.0, "ADSMoveSpreadInc": 0.001, "ADSMoveFirstShotMul": 1.0, "ADSMoveSpreadFiringDecCoef": 0.0, "ADSMoveSpreadFiringDecExp": 0.25, "ADSMoveSpreadFiringDecOffset": 6.6}, {"displayname": "M121 A2", "RoF": 654.545, "ADSStandBaseMax": 11.0, "ADSBaseSpreadInc": 0.392, "ADSBaseFirstShotMul": 1.0, "ADSBaseSpreadFiringDecCoef": 1.22, "ADSBaseSpreadFiringDecExp": 2.5, "ADSBaseSpreadFiringDecOffset": 1.84, "ADSStandMoveMax": 13.0, "ADSMoveSpreadInc": 0.392, "ADSMoveFirstShotMul": 1.0, "ADSMoveSpreadFiringDecCoef": 1.22, "ADSMoveSpreadFiringDecExp": 2.5, "ADSMoveSpreadFiringDecOffset": 1.84}, {"displayname": "M123K", "RoF": 830.769, "ADSStandBaseMax": 11.0, "ADSBaseSpreadInc": 0.27, "ADSBaseFirstShotMul": 1.0, "ADSBaseSpreadFiringDecCoef": 1.22, "ADSBaseSpreadFiringDecExp": 2.5, "ADSBaseSpreadFiringDecOffset": 1.84, "ADSStandMoveMax": 13.0, "ADSMoveSpreadInc": 0.27, "ADSMoveFirstShotMul": 1.0, "ADSMoveSpreadFiringDecCoef": 1.22, "ADSMoveSpreadFiringDecExp": 2.5, "ADSMoveSpreadFiringDecOffset": 1.84}, {"displayname": "M2010 ESR", "RoF": 44.0816018658339, "ADSStandBaseMax": 9.0, "ADSBaseSpreadInc": 0.0, "ADSBaseFirstShotMul": 1.0, "ADSBaseSpreadFiringDecCoef": 0.0, "ADSBaseSpreadFiringDecExp": 0.25, "ADSBaseSpreadFiringDecOffset": 6.6, "ADSStandMoveMax": 10.0, "ADSMoveSpreadInc": 0.0, "ADSMoveFirstShotMul": 1.0, "ADSMoveSpreadFiringDecCoef": 0.0, "ADSMoveSpreadFiringDecExp": 0.25, "ADSMoveSpreadFiringDecOffset": 6.6}, {"displayname": "M240L", "RoF": 599.999, "ADSStandBaseMax": 11.0, "ADSBaseSpreadInc": 0.392, "ADSBaseFirstShotMul": 1.0, "ADSBaseSpreadFiringDecCoef": 1.22, "ADSBaseSpreadFiringDecExp": 2.5, "ADSBaseSpreadFiringDecOffset": 1.84, "ADSStandMoveMax": 13.0, "ADSMoveSpreadInc": 0.392, "ADSMoveFirstShotMul": 1.0, "ADSMoveSpreadFiringDecCoef": 1.22, "ADSMoveSpreadFiringDecExp": 2.5, "ADSMoveSpreadFiringDecOffset": 1.84}, {"displayname": "M250", "RoF": 674.999, "ADSStandBaseMax": 11.0, "ADSBaseSpreadInc": 0.307, "ADSBaseFirstShotMul": 1.0, "ADSBaseSpreadFiringDecCoef": 1.22, "ADSBaseSpreadFiringDecExp": 2.5, "ADSBaseSpreadFiringDecOffset": 1.84, "ADSStandMoveMax": 13.0, "ADSMoveSpreadInc": 0.307, "ADSMoveFirstShotMul": 1.0, "ADSMoveSpreadFiringDecCoef": 1.22, "ADSMoveSpreadFiringDecExp": 2.5, "ADSMoveSpreadFiringDecOffset": 1.84}, {"displayname": "M277", "RoF": 719.999, "ADSStandBaseMax": 6.0, "ADSBaseSpreadInc": 0.307, "ADSBaseFirstShotMul": 1.0, "ADSBaseSpreadFiringDecCoef": 1.22, "ADSBaseSpreadFiringDecExp": 2.5, "ADSBaseSpreadFiringDecOffset": 1.84, "ADSStandMoveMax": 7.0, "ADSMoveSpreadInc": 0.307, "ADSMoveFirstShotMul": 1.0, "ADSMoveSpreadFiringDecCoef": 1.22, "ADSMoveSpreadFiringDecExp": 2.5, "ADSMoveSpreadFiringDecOffset": 1.84}, {"displayname": "M357 Trait", "RoF": 224.999, "ADSStandBaseMax": 6.0, "ADSBaseSpreadInc": 0.0, "ADSBaseFirstShotMul": 1.0, "ADSBaseSpreadFiringDecCoef": 0.0, "ADSBaseSpreadFiringDecExp": 0.25, "ADSBaseSpreadFiringDecOffset": 6.6, "ADSStandMoveMax": 6.0, "ADSMoveSpreadInc": 0.0, "ADSMoveFirstShotMul": 1.0, "ADSMoveSpreadFiringDecCoef": 0.0, "ADSMoveSpreadFiringDecExp": 0.25, "ADSMoveSpreadFiringDecOffset": 6.6}, {"displayname": "M39 EMR", "RoF": 257.142, "ADSStandBaseMax": 9.0, "ADSBaseSpreadInc": 0.0, "ADSBaseFirstShotMul": 1.0, "ADSBaseSpreadFiringDecCoef": 0.0, "ADSBaseSpreadFiringDecExp": 0.25, "ADSBaseSpreadFiringDecOffset": 6.6, "ADSStandMoveMax": 10.0, "ADSMoveSpreadInc": 0.0, "ADSMoveFirstShotMul": 1.0, "ADSMoveSpreadFiringDecCoef": 0.0, "ADSMoveSpreadFiringDecExp": 0.25, "ADSMoveSpreadFiringDecOffset": 6.6}, {"displayname": "M417 A2", "RoF": 654.545, "ADSStandBaseMax": 6.0, "ADSBaseSpreadInc": 0.307, "ADSBaseFirstShotMul": 1.0, "ADSBaseSpreadFiringDecCoef": 1.22, "ADSBaseSpreadFiringDecExp": 2.5, "ADSBaseSpreadFiringDecOffset": 1.84, "ADSStandMoveMax": 7.0, "ADSMoveSpreadInc": 0.307, "ADSMoveFirstShotMul": 1.0, "ADSMoveSpreadFiringDecCoef": 1.22, "ADSMoveSpreadFiringDecExp": 2.5, "ADSMoveSpreadFiringDecOffset": 1.84}, {"displayname": "M433", "RoF": 830.769, "ADSStandBaseMax": 7.0, "ADSBaseSpreadInc": 0.27, "ADSBaseFirstShotMul": 1.0, "ADSBaseSpreadFiringDecCoef": 1.22, "ADSBaseSpreadFiringDecExp": 2.5, "ADSBaseSpreadFiringDecOffset": 1.84, "ADSStandMoveMax": 8.0, "ADSMoveSpreadInc": 0.27, "ADSMoveFirstShotMul": 1.0, "ADSMoveSpreadFiringDecCoef": 1.22, "ADSMoveSpreadFiringDecExp": 2.5, "ADSMoveSpreadFiringDecOffset": 1.84}, {"displayname": "M44", "RoF": 163.636, "ADSStandBaseMax": 6.0, "ADSBaseSpreadInc": 0.0, "ADSBaseFirstShotMul": 1.0, "ADSBaseSpreadFiringDecCoef": 0.0, "ADSBaseSpreadFiringDecExp": 0.25, "ADSBaseSpreadFiringDecOffset": 6.6, "ADSStandMoveMax": 6.0, "ADSMoveSpreadInc": 0.0, "ADSMoveFirstShotMul": 1.0, "ADSMoveSpreadFiringDecCoef": 0.0, "ADSMoveSpreadFiringDecExp": 0.25, "ADSMoveSpreadFiringDecOffset": 6.6}, {"displayname": "M45A1", "RoF": 327.272, "ADSStandBaseMax": 6.0, "ADSBaseSpreadInc": 0.0, "ADSBaseFirstShotMul": 1.0, "ADSBaseSpreadFiringDecCoef": 0.0, "ADSBaseSpreadFiringDecExp": 0.25, "ADSBaseSpreadFiringDecOffset": 6.6, "ADSStandMoveMax": 6.0, "ADSMoveSpreadInc": 0.0, "ADSMoveFirstShotMul": 1.0, "ADSMoveSpreadFiringDecCoef": 0.0, "ADSMoveSpreadFiringDecExp": 0.25, "ADSMoveSpreadFiringDecOffset": 6.6}, {"displayname": "M4A1", "RoF": 899.999, "ADSStandBaseMax": 6.0, "ADSBaseSpreadInc": 0.228, "ADSBaseFirstShotMul": 1.0, "ADSBaseSpreadFiringDecCoef": 1.22, "ADSBaseSpreadFiringDecExp": 2.5, "ADSBaseSpreadFiringDecOffset": 1.84, "ADSStandMoveMax": 7.0, "ADSMoveSpreadInc": 0.228, "ADSMoveFirstShotMul": 1.0, "ADSMoveSpreadFiringDecCoef": 1.22, "ADSMoveSpreadFiringDecExp": 2.5, "ADSMoveSpreadFiringDecOffset": 1.84}, {"displayname": "M87A1", "RoF": 1799.999, "ADSStandBaseMax": 5.0, "ADSBaseSpreadInc": 0.001, "ADSBaseFirstShotMul": 1.0, "ADSBaseSpreadFiringDecCoef": 0.0, "ADSBaseSpreadFiringDecExp": 0.25, "ADSBaseSpreadFiringDecOffset": 6.6, "ADSStandMoveMax": 5.0, "ADSMoveSpreadInc": 0.001, "ADSMoveFirstShotMul": 1.0, "ADSMoveSpreadFiringDecCoef": 0.0, "ADSMoveSpreadFiringDecExp": 0.25, "ADSMoveSpreadFiringDecOffset": 6.6}, {"displayname": "Mini Scout", "RoF": 51.0, "ADSStandBaseMax": 7.0, "ADSBaseSpreadInc": 0.0, "ADSBaseFirstShotMul": 1.0, "ADSBaseSpreadFiringDecCoef": 0.0, "ADSBaseSpreadFiringDecExp": 0.25, "ADSBaseSpreadFiringDecOffset": 6.6, "ADSStandMoveMax": 8.0, "ADSMoveSpreadInc": 0.0, "ADSMoveFirstShotMul": 1.0, "ADSMoveSpreadFiringDecCoef": 0.0, "ADSMoveSpreadFiringDecExp": 0.25, "ADSMoveSpreadFiringDecOffset": 6.6}, {"displayname": "NVO-228E", "RoF": 654.545, "ADSStandBaseMax": 7.0, "ADSBaseSpreadInc": 0.307, "ADSBaseFirstShotMul": 1.0, "ADSBaseSpreadFiringDecCoef": 1.22, "ADSBaseSpreadFiringDecExp": 2.5, "ADSBaseSpreadFiringDecOffset": 1.84, "ADSStandMoveMax": 8.0, "ADSMoveSpreadInc": 0.307, "ADSMoveFirstShotMul": 1.0, "ADSMoveSpreadFiringDecCoef": 1.22, "ADSMoveSpreadFiringDecExp": 2.5, "ADSMoveSpreadFiringDecOffset": 1.84}, {"displayname": "P18", "RoF": 399.999, "ADSStandBaseMax": 6.0, "ADSBaseSpreadInc": 0.0, "ADSBaseFirstShotMul": 1.0, "ADSBaseSpreadFiringDecCoef": 0.0, "ADSBaseSpreadFiringDecExp": 0.25, "ADSBaseSpreadFiringDecOffset": 6.6, "ADSStandMoveMax": 6.0, "ADSMoveSpreadInc": 0.0, "ADSMoveFirstShotMul": 1.0, "ADSMoveSpreadFiringDecCoef": 0.0, "ADSMoveSpreadFiringDecExp": 0.25, "ADSMoveSpreadFiringDecOffset": 6.6}, {"displayname": "PSR", "RoF": 38.11762015220833, "ADSStandBaseMax": 11.0, "ADSBaseSpreadInc": 0.0, "ADSBaseFirstShotMul": 1.0, "ADSBaseSpreadFiringDecCoef": 0.0, "ADSBaseSpreadFiringDecExp": 0.25, "ADSBaseSpreadFiringDecOffset": 6.6, "ADSStandMoveMax": 13.0, "ADSMoveSpreadInc": 0.0, "ADSMoveFirstShotMul": 1.0, "ADSMoveSpreadFiringDecCoef": 0.0, "ADSMoveSpreadFiringDecExp": 0.25, "ADSMoveSpreadFiringDecOffset": 6.6}, {"displayname": "PW5A3", "RoF": 771.428, "ADSStandBaseMax": 6.0, "ADSBaseSpreadInc": 0.21, "ADSBaseFirstShotMul": 1.0, "ADSBaseSpreadFiringDecCoef": 1.22, "ADSBaseSpreadFiringDecExp": 2.5, "ADSBaseSpreadFiringDecOffset": 1.84, "ADSStandMoveMax": 6.0, "ADSMoveSpreadInc": 0.21, "ADSMoveFirstShotMul": 1.0, "ADSMoveSpreadFiringDecCoef": 1.22, "ADSMoveSpreadFiringDecExp": 2.5, "ADSMoveSpreadFiringDecOffset": 1.84}, {"displayname": "PW7A2", "RoF": 947.368, "ADSStandBaseMax": 6.0, "ADSBaseSpreadInc": 0.166, "ADSBaseFirstShotMul": 1.0, "ADSBaseSpreadFiringDecCoef": 1.22, "ADSBaseSpreadFiringDecExp": 2.5, "ADSBaseSpreadFiringDecOffset": 1.84, "ADSStandMoveMax": 6.0, "ADSMoveSpreadInc": 0.166, "ADSMoveFirstShotMul": 1.0, "ADSMoveSpreadFiringDecCoef": 1.22, "ADSMoveSpreadFiringDecExp": 2.5, "ADSMoveSpreadFiringDecOffset": 1.84}, {"displayname": "QBZ-192", "RoF": 771.428, "ADSStandBaseMax": 6.0, "ADSBaseSpreadInc": 0.228, "ADSBaseFirstShotMul": 1.0, "ADSBaseSpreadFiringDecCoef": 1.22, "ADSBaseSpreadFiringDecExp": 2.5, "ADSBaseSpreadFiringDecOffset": 1.84, "ADSStandMoveMax": 7.0, "ADSMoveSpreadInc": 0.228, "ADSMoveFirstShotMul": 1.0, "ADSMoveSpreadFiringDecCoef": 1.22, "ADSMoveSpreadFiringDecExp": 2.5, "ADSMoveSpreadFiringDecOffset": 1.84}, {"displayname": "RPKM", "RoF": 553.846, "ADSStandBaseMax": 9.0, "ADSBaseSpreadInc": 0.307, "ADSBaseFirstShotMul": 1.0, "ADSBaseSpreadFiringDecCoef": 1.22, "ADSBaseSpreadFiringDecExp": 2.5, "ADSBaseSpreadFiringDecOffset": 1.84, "ADSStandMoveMax": 10.0, "ADSMoveSpreadInc": 0.307, "ADSMoveFirstShotMul": 1.0, "ADSMoveSpreadFiringDecCoef": 1.22, "ADSMoveSpreadFiringDecExp": 2.5, "ADSMoveSpreadFiringDecOffset": 1.84}, {"displayname": "SCW-10", "RoF": 799.999, "ADSStandBaseMax": 6.0, "ADSBaseSpreadInc": 0.27, "ADSBaseFirstShotMul": 1.0, "ADSBaseSpreadFiringDecCoef": 1.22, "ADSBaseSpreadFiringDecExp": 2.5, "ADSBaseSpreadFiringDecOffset": 1.84, "ADSStandMoveMax": 6.0, "ADSMoveSpreadInc": 0.27, "ADSMoveFirstShotMul": 1.0, "ADSMoveSpreadFiringDecCoef": 1.22, "ADSMoveSpreadFiringDecExp": 2.5, "ADSMoveSpreadFiringDecOffset": 1.84}, {"displayname": "SG 553R", "RoF": 719.999, "ADSStandBaseMax": 6.0, "ADSBaseSpreadInc": 0.27, "ADSBaseFirstShotMul": 1.0, "ADSBaseSpreadFiringDecCoef": 1.22, "ADSBaseSpreadFiringDecExp": 2.5, "ADSBaseSpreadFiringDecOffset": 1.84, "ADSStandMoveMax": 7.0, "ADSMoveSpreadInc": 0.27, "ADSMoveFirstShotMul": 1.0, "ADSMoveSpreadFiringDecCoef": 1.22, "ADSMoveSpreadFiringDecExp": 2.5, "ADSMoveSpreadFiringDecOffset": 1.84}, {"displayname": "SGX", "RoF": 830.769, "ADSStandBaseMax": 6.0, "ADSBaseSpreadInc": 0.21, "ADSBaseFirstShotMul": 1.0, "ADSBaseSpreadFiringDecCoef": 1.22, "ADSBaseSpreadFiringDecExp": 2.5, "ADSBaseSpreadFiringDecOffset": 1.84, "ADSStandMoveMax": 6.0, "ADSMoveSpreadInc": 0.21, "ADSMoveFirstShotMul": 1.0, "ADSMoveSpreadFiringDecCoef": 1.22, "ADSMoveSpreadFiringDecExp": 2.5, "ADSMoveSpreadFiringDecOffset": 1.84}, {"displayname": "SL9", "RoF": 674.999, "ADSStandBaseMax": 6.0, "ADSBaseSpreadInc": 0.21, "ADSBaseFirstShotMul": 1.0, "ADSBaseSpreadFiringDecCoef": 1.22, "ADSBaseSpreadFiringDecExp": 2.5, "ADSBaseSpreadFiringDecOffset": 1.84, "ADSStandMoveMax": 6.0, "ADSMoveSpreadInc": 0.21, "ADSMoveFirstShotMul": 1.0, "ADSMoveSpreadFiringDecCoef": 1.22, "ADSMoveSpreadFiringDecExp": 2.5, "ADSMoveSpreadFiringDecOffset": 1.84}, {"displayname": "SOR-300SC", "RoF": 599.999, "ADSStandBaseMax": 6.0, "ADSBaseSpreadInc": 0.27, "ADSBaseFirstShotMul": 1.0, "ADSBaseSpreadFiringDecCoef": 1.22, "ADSBaseSpreadFiringDecExp": 2.5, "ADSBaseSpreadFiringDecOffset": 1.84, "ADSStandMoveMax": 7.0, "ADSMoveSpreadInc": 0.27, "ADSMoveFirstShotMul": 1.0, "ADSMoveSpreadFiringDecCoef": 1.22, "ADSMoveSpreadFiringDecExp": 2.5, "ADSMoveSpreadFiringDecOffset": 1.84}, {"displayname": "SOR-556 MK2", "RoF": 568.421, "ADSStandBaseMax": 7.0, "ADSBaseSpreadInc": 0.27, "ADSBaseFirstShotMul": 1.0, "ADSBaseSpreadFiringDecCoef": 1.22, "ADSBaseSpreadFiringDecExp": 2.5, "ADSBaseSpreadFiringDecOffset": 1.84, "ADSStandMoveMax": 8.0, "ADSMoveSpreadInc": 0.27, "ADSMoveFirstShotMul": 1.0, "ADSMoveSpreadFiringDecCoef": 1.22, "ADSMoveSpreadFiringDecExp": 2.5, "ADSMoveSpreadFiringDecOffset": 1.84}, {"displayname": "SV-98", "RoF": 37.67438355865456, "ADSStandBaseMax": 9.0, "ADSBaseSpreadInc": 0.0, "ADSBaseFirstShotMul": 1.0, "ADSBaseSpreadFiringDecCoef": 0.0, "ADSBaseSpreadFiringDecExp": 0.25, "ADSBaseSpreadFiringDecOffset": 6.6, "ADSStandMoveMax": 10.0, "ADSMoveSpreadInc": 0.0, "ADSMoveFirstShotMul": 1.0, "ADSMoveSpreadFiringDecCoef": 0.0, "ADSMoveSpreadFiringDecExp": 0.25, "ADSMoveSpreadFiringDecOffset": 6.6}, {"displayname": "SVDM", "RoF": 299.999, "ADSStandBaseMax": 9.0, "ADSBaseSpreadInc": 0.0, "ADSBaseFirstShotMul": 1.0, "ADSBaseSpreadFiringDecCoef": 0.0, "ADSBaseSpreadFiringDecExp": 0.25, "ADSBaseSpreadFiringDecOffset": 6.6, "ADSStandMoveMax": 10.0, "ADSMoveSpreadInc": 0.0, "ADSMoveFirstShotMul": 1.0, "ADSMoveSpreadFiringDecCoef": 0.0, "ADSMoveSpreadFiringDecExp": 0.25, "ADSMoveSpreadFiringDecOffset": 6.6}, {"displayname": "SVK-8.6", "RoF": 149.999, "ADSStandBaseMax": 9.0, "ADSBaseSpreadInc": 0.0, "ADSBaseFirstShotMul": 1.0, "ADSBaseSpreadFiringDecCoef": 0.0, "ADSBaseSpreadFiringDecExp": 0.25, "ADSBaseSpreadFiringDecOffset": 6.6, "ADSStandMoveMax": 10.0, "ADSMoveSpreadInc": 0.0, "ADSMoveFirstShotMul": 1.0, "ADSMoveSpreadFiringDecCoef": 0.0, "ADSMoveSpreadFiringDecExp": 0.25, "ADSMoveSpreadFiringDecOffset": 6.6}, {"displayname": "TR7", "RoF": 719.999, "ADSStandBaseMax": 7.0, "ADSBaseSpreadInc": 0.392, "ADSBaseFirstShotMul": 1.0, "ADSBaseSpreadFiringDecCoef": 1.22, "ADSBaseSpreadFiringDecExp": 2.5, "ADSBaseSpreadFiringDecOffset": 1.84, "ADSStandMoveMax": 8.0, "ADSMoveSpreadInc": 0.392, "ADSMoveFirstShotMul": 1.0, "ADSMoveSpreadFiringDecCoef": 1.22, "ADSMoveSpreadFiringDecExp": 2.5, "ADSMoveSpreadFiringDecOffset": 1.84}, {"displayname": "UMG-40", "RoF": 635.294, "ADSStandBaseMax": 6.0, "ADSBaseSpreadInc": 0.228, "ADSBaseFirstShotMul": 1.0, "ADSBaseSpreadFiringDecCoef": 1.22, "ADSBaseSpreadFiringDecExp": 2.5, "ADSBaseSpreadFiringDecOffset": 1.84, "ADSStandMoveMax": 6.0, "ADSMoveSpreadInc": 0.228, "ADSMoveFirstShotMul": 1.0, "ADSMoveSpreadFiringDecCoef": 1.22, "ADSMoveSpreadFiringDecExp": 2.5, "ADSMoveSpreadFiringDecOffset": 1.84}, {"displayname": "USG-90", "RoF": 899.999, "ADSStandBaseMax": 6.0, "ADSBaseSpreadInc": 0.179, "ADSBaseFirstShotMul": 1.0, "ADSBaseSpreadFiringDecCoef": 1.22, "ADSBaseSpreadFiringDecExp": 2.5, "ADSBaseSpreadFiringDecOffset": 1.84, "ADSStandMoveMax": 6.0, "ADSMoveSpreadInc": 0.179, "ADSMoveFirstShotMul": 1.0, "ADSMoveSpreadFiringDecCoef": 1.22, "ADSMoveSpreadFiringDecExp": 2.5, "ADSMoveSpreadFiringDecOffset": 1.84}, {"displayname": "VCR-2", "RoF": 899.999, "ADSStandBaseMax": 7.0, "ADSBaseSpreadInc": 0.27, "ADSBaseFirstShotMul": 1.0, "ADSBaseSpreadFiringDecCoef": 1.22, "ADSBaseSpreadFiringDecExp": 2.5, "ADSBaseSpreadFiringDecOffset": 1.84, "ADSStandMoveMax": 8.0, "ADSMoveSpreadInc": 0.27, "ADSMoveFirstShotMul": 1.0, "ADSMoveSpreadFiringDecCoef": 1.22, "ADSMoveSpreadFiringDecExp": 2.5, "ADSMoveSpreadFiringDecOffset": 1.84}, {"displayname": "VZ. 61", "RoF": 818.181, "ADSStandBaseMax": 6.0, "ADSBaseSpreadInc": 0.151, "ADSBaseFirstShotMul": 1.0, "ADSBaseSpreadFiringDecCoef": 1.22, "ADSBaseSpreadFiringDecExp": 2.5, "ADSBaseSpreadFiringDecOffset": 1.84, "ADSStandMoveMax": 6.0, "ADSMoveSpreadInc": 0.151, "ADSMoveFirstShotMul": 1.0, "ADSMoveSpreadFiringDecCoef": 1.22, "ADSMoveSpreadFiringDecExp": 2.5, "ADSMoveSpreadFiringDecOffset": 1.84}];
+const EXCLUDED_WEAPON_NAMES = new Set([
+'18.5KS-K',
+'DB-12',
+'M1014',
+'M87A1',
+'M2010 ESR',
+'M44',
+'SV-98',
+'SVDM',
+'SVK-8.6',
+'SVK',
+'M39 EMR',
+'GRT-CPS',
+'Mini Scout',
+'PSR',
+'ES 5.7',
+'GGH-22',
+'M357 Trait',
+'M45A1',
+  'P18'
+]);
+
+const FILTERED_WEAPONS = WEAPONS.filter(w => !EXCLUDED_WEAPON_NAMES.has(w.displayname));
+
+
+
+
     const TIER_VALUES = [0.68, 0.55, 0.43, 0.32, 0.22, 0.13, 0.05];
     const DEFAULT_MOVING_TIER_INDEX = 3; // 0-based, corresponds to 0.32
     const SHIFT_OPTIONS = [-3, -2, -1, 0, 1];
@@ -249,13 +307,19 @@
     const enableWeaponBEl = document.getElementById('enableWeaponB');
         const shotsInputEl = document.getElementById('shotsInput');
     const shotsValueEl = document.getElementById('shotsValue');
+    const shotsLabelEl = document.getElementById('shotsLabel');
     const tierContainerEl = document.getElementById('tierContainer');
     const showMarkersEl = document.getElementById('showMarkers');
     const showEffectiveOverlayEl = document.getElementById('showEffectiveOverlay');
+    const enableBurstCompareEl = document.getElementById('enableBurstCompare');
+    const burstControlsEl = document.getElementById('burstControls');
+    const shotsPerBurstEl = document.getElementById('shotsPerBurst');
+    const waitSliderEl = document.getElementById('waitSlider');
+    const waitValueEl = document.getElementById('waitValue');
     const statsEl = document.getElementById('stats');
 
     function populateWeaponDropdowns() {
-      WEAPONS.forEach((w) => {
+      FILTERED_WEAPONS.forEach((w) => {
         const optA = document.createElement('option');
         optA.value = w.displayname;
         optA.textContent = w.displayname;
@@ -267,8 +331,8 @@
         weaponBEl.appendChild(optB);
       });
 
-      weaponAEl.value = WEAPONS.find(w => w.displayname === 'M433')?.displayname || WEAPONS[0].displayname;
-      weaponBEl.value = WEAPONS.find(w => w.displayname === 'B36A3')?.displayname || WEAPONS[Math.min(1, WEAPONS.length - 1)].displayname;
+      weaponAEl.value = FILTERED_WEAPONS.find(w => w.displayname === 'M433')?.displayname || FILTERED_WEAPONS[0].displayname;
+      weaponBEl.value = FILTERED_WEAPONS.find(w => w.displayname === 'B36A3')?.displayname || FILTERED_WEAPONS[Math.min(1, FILTERED_WEAPONS.length - 1)].displayname;
     }
 
     function populateTierChecks() {
@@ -276,7 +340,7 @@
         const card = document.createElement('label');
         card.className = 'check-card';
         card.innerHTML = `
-          <input type="checkbox" class="tierCheck" value="${shift}" ${shift >= -2 && shift <= 1 ? 'checked' : ''} />
+          <input type="checkbox" class="tierCheck" value="${shift}" ${shift === 0 ? 'checked' : ''} />
           <div>${shift > 0 ? '+' + shift : shift}</div>
         `;
         tierContainerEl.appendChild(card);
@@ -297,6 +361,100 @@
       let idx = DEFAULT_MOVING_TIER_INDEX - shift;
       idx = Math.max(0, Math.min(TIER_VALUES.length - 1, idx));
       return TIER_VALUES[idx];
+    }
+
+    function clampSpread(spread, baselineSpread, maxSpread) {
+      return Math.max(baselineSpread, Math.min(spread, maxSpread));
+    }
+
+    function buildFullAutoShotTimes(weapon, nShots) {
+      const shotDt = 60 / weapon.RoF;
+      return Array.from({ length: nShots }, (_, i) => i * shotDt);
+    }
+
+    function buildBurstShotTimes(weapon, shotsPerBurst, nBursts, waitTime) {
+      const shotDt = 60 / weapon.RoF;
+      const shotTimes = [];
+      let t = 0;
+      for (let b = 0; b < nBursts; b++) {
+        for (let s = 0; s < shotsPerBurst; s++) {
+          shotTimes.push(t);
+          if (s < shotsPerBurst - 1) {
+            t += shotDt;
+          }
+        }
+        if (b < nBursts - 1) {
+          t += shotDt + waitTime;
+        }
+      }
+      return shotTimes;
+    }
+
+    function simulateCaseFromShotTimes(weapon, mode, shotTimes, baselineSpread) {
+      let maxSpread, spreadInc, firstShotMul, coef, exponent, offset;
+
+      if (mode === 'stand') {
+        maxSpread = weapon.ADSStandBaseMax;
+        spreadInc = weapon.ADSBaseSpreadInc;
+        firstShotMul = weapon.ADSBaseFirstShotMul ?? 1;
+        coef = weapon.ADSBaseSpreadFiringDecCoef;
+        exponent = weapon.ADSBaseSpreadFiringDecExp;
+        offset = weapon.ADSBaseSpreadFiringDecOffset;
+      } else {
+        maxSpread = weapon.ADSStandMoveMax;
+        spreadInc = weapon.ADSMoveSpreadInc;
+        firstShotMul = weapon.ADSMoveFirstShotMul ?? 1;
+        coef = weapon.ADSMoveSpreadFiringDecCoef;
+        exponent = weapon.ADSMoveSpreadFiringDecExp;
+        offset = weapon.ADSMoveSpreadFiringDecOffset;
+      }
+
+      const preShotSpread = [];
+      const postShotSpread = [];
+      let currentSpread = clampSpread(baselineSpread, baselineSpread, maxSpread);
+
+      for (let i = 0; i < shotTimes.length; i++) {
+        currentSpread = clampSpread(currentSpread, baselineSpread, maxSpread);
+        preShotSpread.push(currentSpread);
+
+        const incThisShot = (i === 0) ? spreadInc * firstShotMul : spreadInc;
+        currentSpread = clampSpread(currentSpread + incThisShot, baselineSpread, maxSpread);
+        postShotSpread.push(currentSpread);
+
+        if (i < shotTimes.length - 1) {
+          let remaining = shotTimes[i + 1] - shotTimes[i];
+          while (remaining > 1e-12) {
+            const step = Math.min(1 / 60, remaining);
+            const delta = Math.max(currentSpread - baselineSpread, 0);
+            const dec = step * (coef * Math.pow(delta, exponent) + offset);
+            currentSpread = clampSpread(currentSpread - dec, baselineSpread, maxSpread);
+            remaining -= step;
+          }
+        }
+      }
+
+      const effectiveSpreadIncrease = preShotSpread.map((v, i) => {
+        if (i === 0) return postShotSpread[0] - preShotSpread[0];
+        return v - preShotSpread[i - 1];
+      });
+
+      return {
+        mode,
+        baselineSpread,
+        maxSpread,
+        shotTimes,
+        preShotSpread,
+        postShotSpread,
+        effectiveSpreadIncrease,
+        rawSpreadIncrease: spreadInc,
+        firstShotSpreadIncrease: spreadInc * firstShotMul
+      };
+    }
+
+    function makeTrace(x, y, mode, name, line, marker, hovertemplate) {
+      const trace = { x, y, mode, name, line, hovertemplate, type: 'scatter' };
+      if (marker) trace.marker = marker;
+      return trace;
     }
 
     function simulateCase(weapon, mode, nShots, fps, baselineSpread) {
@@ -325,14 +483,15 @@
       const preShotSpread = [];
       const postShotSpread = [];
 
-      let currentSpread = baselineSpread;
+      let currentSpread = clampSpread(baselineSpread, baselineSpread, maxSpread);
 
       for (let i = 0; i < nShots; i++) {
-        shotTimes.push((i + 1) * shotDt);
+        shotTimes.push(i * shotDt);
+        currentSpread = clampSpread(currentSpread, baselineSpread, maxSpread);
         preShotSpread.push(currentSpread);
 
         const incThisShot = (i === 0) ? spreadInc * firstShotMul : spreadInc;
-        currentSpread = Math.min(currentSpread + incThisShot, maxSpread);
+        currentSpread = clampSpread(currentSpread + incThisShot, baselineSpread, maxSpread);
         postShotSpread.push(currentSpread);
 
         if (i < nShots - 1) {
@@ -341,14 +500,16 @@
             const step = Math.min(dt, remaining);
             const delta = Math.max(currentSpread - baselineSpread, 0);
             const dec = step * (coef * Math.pow(delta, exponent) + offset);
-            currentSpread = currentSpread - dec;
-            currentSpread = Math.max(Math.min(currentSpread, maxSpread), baselineSpread);
+            currentSpread = clampSpread(currentSpread - dec, baselineSpread, maxSpread);
             remaining -= step;
           }
         }
       }
 
-      const effectiveSpreadIncrease = preShotSpread.map((v, i) => i === 0 ? 0 : v - preShotSpread[i - 1]);
+      const effectiveSpreadIncrease = preShotSpread.map((v, i) => {
+        if (i === 0) return postShotSpread[0] - preShotSpread[0];
+        return v - preShotSpread[i - 1];
+      });
 
       return {
         mode,
@@ -368,6 +529,34 @@
       return shift > 0 ? `+${shift} Tier` : `${shift} Tier`;
     }
 
+    const SHIFT_COLOR_MAP_A = {
+      '-3': '#8c564b',
+      '-2': '#9467bd',
+      '-1': '#2ca02c',
+      '0': '#1f77b4',
+      '1': '#ff7f0e'
+    };
+
+    const SHIFT_COLOR_MAP_B = {
+      '-3': '#7f7f7f',
+      '-2': '#e377c2',
+      '-1': '#bcbd22',
+      '0': '#17becf',
+      '1': '#8c564b'
+    };
+
+    function getShiftColor(shift, weaponKey) {
+      const key = String(shift);
+      return (weaponKey === 'B' ? SHIFT_COLOR_MAP_B : SHIFT_COLOR_MAP_A)[key] || '#ffffff';
+    }
+
+    function setSelectedShifts(shiftsToCheck) {
+      const allowed = new Set(shiftsToCheck.map(Number));
+      document.querySelectorAll('.tierCheck').forEach((checkbox) => {
+        checkbox.checked = allowed.has(Number(checkbox.value));
+      });
+    }
+
     function buildWeaponStatsCard(title, weapon) {
       return `
         <div class="stat">
@@ -381,6 +570,13 @@
       `;
     }
 
+    function updateBurstControlsVisibility() {
+      const showBurstControls = enableBurstCompareEl.checked && !showEffectiveOverlayEl.checked;
+      burstControlsEl.classList.toggle('hidden', !showBurstControls);
+      waitValueEl.textContent = Number(waitSliderEl.value).toFixed(2);
+      shotsLabelEl.textContent = showBurstControls ? 'Number of bursts' : 'Number of shots';
+    }
+
     function update() {
       const weaponA = getWeaponByName(weaponAEl.value);
       const useWeaponB = enableWeaponBEl.checked;
@@ -390,91 +586,202 @@
       const shifts = getSelectedShifts();
       const showMarkers = showMarkersEl.checked;
       const showEffectiveOverlay = showEffectiveOverlayEl.checked;
+      const useBurstCompare = enableBurstCompareEl.checked && !showEffectiveOverlay;
 
       shotsValueEl.textContent = String(nShots);
+      waitValueEl.textContent = Number(waitSliderEl.value).toFixed(2);
       weaponBEl.disabled = !useWeaponB;
+      updateBurstControlsVisibility();
 
       const traces = [];
-
-      const paletteA = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd'];
-      const paletteB = ['#17becf', '#bcbd22', '#e377c2', '#8c564b', '#7f7f7f'];
       const markerA = 'circle';
       const markerB = 'square';
       const lineWidth = 2.5;
 
+      function lineMode() {
+        return showMarkers ? 'lines+markers' : 'lines';
+      }
+
       if (showEffectiveOverlay) {
         const moveA = simulateCase(weaponA, 'move', nShots, fps, movingBaselineFromShift(0));
-        traces.push({
-          x: moveA.shotTimes.slice(1),
-          y: moveA.effectiveSpreadIncrease.slice(1),
-          mode: showMarkers ? 'lines+markers' : 'lines',
-          name: `${weaponA.displayname} Effective`,
-          line: { color: paletteA[0], width: 2.5, dash: 'dot' },
-          marker: { symbol: markerA, size: 7, color: paletteA[0] },
-          hovertemplate: '<b>%{fullData.name}</b><br>t=%{x:.3f} s<br>effective Δspread=%{y:.4f}<extra></extra>'
-        });
+        traces.push(makeTrace(
+          moveA.shotTimes.slice(1),
+          moveA.effectiveSpreadIncrease.slice(1),
+          lineMode(),
+          `${weaponA.displayname} Effective`,
+          { color: getShiftColor(0, 'A'), width: 2.5, dash: 'dot' },
+          showMarkers ? { symbol: markerA, size: 7, color: getShiftColor(0, 'A') } : null,
+          '<b>%{fullData.name}</b><br>t=%{x:.3f} s<br>effective Δspread=%{y:.4f}<extra></extra>'
+        ));
 
         if (weaponB) {
           const moveB = simulateCase(weaponB, 'move', nShots, fps, movingBaselineFromShift(0));
-          traces.push({
-            x: moveB.shotTimes.slice(1),
-            y: moveB.effectiveSpreadIncrease.slice(1),
-            mode: showMarkers ? 'lines+markers' : 'lines',
-            name: `${weaponB.displayname} Effective`,
-            line: { color: paletteB[0], width: 2.5, dash: 'dot' },
-            marker: { symbol: markerB, size: 7, color: paletteB[0] },
-            hovertemplate: '<b>%{fullData.name}</b><br>t=%{x:.3f} s<br>effective Δspread=%{y:.4f}<extra></extra>'
+          traces.push(makeTrace(
+            moveB.shotTimes.slice(1),
+            moveB.effectiveSpreadIncrease.slice(1),
+            lineMode(),
+            `${weaponB.displayname} Effective`,
+            { color: getShiftColor(0, 'B'), width: 2.5, dash: 'dot' },
+            showMarkers ? { symbol: markerB, size: 7, color: getShiftColor(0, 'B') } : null,
+            '<b>%{fullData.name}</b><br>t=%{x:.3f} s<br>effective Δspread=%{y:.4f}<extra></extra>'
+          ));
+        }
+      } else if (useBurstCompare) {
+        const shotsPerBurst = Math.max(1, Math.round(Number(shotsPerBurstEl.value) || 2));
+        const nBursts = Math.max(1, Math.round(Number(shotsInputEl.value) || 25));
+        const waitTime = Math.max(0, Math.min(0.5, Number(waitSliderEl.value) || 0));
+
+        const burstTimesA = buildBurstShotTimes(weaponA, shotsPerBurst, nBursts, waitTime);
+        const fullAutoTimesA = buildFullAutoShotTimes(weaponA, burstTimesA.length);
+
+        const standABurst = simulateCaseFromShotTimes(weaponA, 'stand', burstTimesA, 0.05);
+        const standAAuto = simulateCaseFromShotTimes(weaponA, 'stand', fullAutoTimesA, 0.05);
+
+        traces.push(makeTrace(
+          standABurst.shotTimes,
+          standABurst.preShotSpread,
+          lineMode(),
+          `${weaponA.displayname} Standing Burst`,
+          { color: '#ffffff', width: lineWidth, dash: 'solid' },
+          showMarkers ? { symbol: markerA, size: 7, color: '#ffffff' } : null,
+          '<b>%{fullData.name}</b><br>t=%{x:.3f} s<br>spread=%{y:.3f}<extra></extra>'
+        ));
+        traces.push(makeTrace(
+          standAAuto.shotTimes,
+          standAAuto.preShotSpread,
+          lineMode(),
+          `${weaponA.displayname} Standing Full Auto`,
+          { color: '#ffffff', width: lineWidth, dash: 'dot' },
+          showMarkers ? { symbol: markerA, size: 7, color: '#ffffff' } : null,
+          '<b>%{fullData.name}</b><br>t=%{x:.3f} s<br>spread=%{y:.3f}<extra></extra>'
+        ));
+
+        shifts.forEach((shift, idx) => {
+          const color = getShiftColor(shift, 'A');
+          const baseline = movingBaselineFromShift(shift);
+          const burst = simulateCaseFromShotTimes(weaponA, 'move', burstTimesA, baseline);
+          const auto = simulateCaseFromShotTimes(weaponA, 'move', fullAutoTimesA, baseline);
+
+          traces.push(makeTrace(
+            burst.shotTimes,
+            burst.preShotSpread,
+            lineMode(),
+            `${weaponA.displayname} Moving ${formatShiftLabel(shift)} Burst`,
+            { color, width: lineWidth, dash: 'dash' },
+            showMarkers ? { symbol: markerA, size: 7, color } : null,
+            '<b>%{fullData.name}</b><br>t=%{x:.3f} s<br>spread=%{y:.3f}<extra></extra>'
+          ));
+          traces.push(makeTrace(
+            auto.shotTimes,
+            auto.preShotSpread,
+            lineMode(),
+            `${weaponA.displayname} Moving ${formatShiftLabel(shift)} Full Auto`,
+            { color, width: lineWidth, dash: 'dashdot' },
+            showMarkers ? { symbol: markerA, size: 7, color } : null,
+            '<b>%{fullData.name}</b><br>t=%{x:.3f} s<br>spread=%{y:.3f}<extra></extra>'
+          ));
+        });
+
+        if (weaponB) {
+          const burstTimesB = buildBurstShotTimes(weaponB, shotsPerBurst, nBursts, waitTime);
+          const fullAutoTimesB = buildFullAutoShotTimes(weaponB, burstTimesB.length);
+
+          const standBBurst = simulateCaseFromShotTimes(weaponB, 'stand', burstTimesB, 0.05);
+          const standBAuto = simulateCaseFromShotTimes(weaponB, 'stand', fullAutoTimesB, 0.05);
+
+          traces.push(makeTrace(
+            standBBurst.shotTimes,
+            standBBurst.preShotSpread,
+            lineMode(),
+            `${weaponB.displayname} Standing Burst`,
+            { color: '#999999', width: lineWidth, dash: 'solid' },
+            showMarkers ? { symbol: markerB, size: 7, color: '#999999' } : null,
+            '<b>%{fullData.name}</b><br>t=%{x:.3f} s<br>spread=%{y:.3f}<extra></extra>'
+          ));
+          traces.push(makeTrace(
+            standBAuto.shotTimes,
+            standBAuto.preShotSpread,
+            lineMode(),
+            `${weaponB.displayname} Standing Full Auto`,
+            { color: '#999999', width: lineWidth, dash: 'dot' },
+            showMarkers ? { symbol: markerB, size: 7, color: '#999999' } : null,
+            '<b>%{fullData.name}</b><br>t=%{x:.3f} s<br>spread=%{y:.3f}<extra></extra>'
+          ));
+
+          shifts.forEach((shift, idx) => {
+            const color = getShiftColor(shift, 'B');
+            const baseline = movingBaselineFromShift(shift);
+            const burst = simulateCaseFromShotTimes(weaponB, 'move', burstTimesB, baseline);
+            const auto = simulateCaseFromShotTimes(weaponB, 'move', fullAutoTimesB, baseline);
+
+            traces.push(makeTrace(
+              burst.shotTimes.slice(1),
+              burst.preShotSpread.slice(1),
+              lineMode(),
+              `${weaponB.displayname} Moving ${formatShiftLabel(shift)} Burst`,
+              { color, width: lineWidth, dash: 'dash' },
+              showMarkers ? { symbol: markerB, size: 7, color } : null,
+              '<b>%{fullData.name}</b><br>t=%{x:.3f} s<br>spread=%{y:.3f}<extra></extra>'
+            ));
+            traces.push(makeTrace(
+              auto.shotTimes.slice(1),
+              auto.preShotSpread.slice(1),
+              lineMode(),
+              `${weaponB.displayname} Moving ${formatShiftLabel(shift)} Full Auto`,
+              { color, width: lineWidth, dash: 'dashdot' },
+              showMarkers ? { symbol: markerB, size: 7, color } : null,
+              '<b>%{fullData.name}</b><br>t=%{x:.3f} s<br>spread=%{y:.3f}<extra></extra>'
+            ));
           });
         }
       } else {
-        // Weapon A standing once: black solid
         const standA = simulateCase(weaponA, 'stand', nShots, fps, 0.05);
-        traces.push({
-          x: standA.shotTimes.slice(1),
-          y: standA.preShotSpread.slice(1),
-          mode: showMarkers ? 'lines+markers' : 'lines',
-          name: `${weaponA.displayname} Standing`,
-          line: { color: '#ffffff', width: lineWidth },
-          marker: { symbol: markerA, size: 7, color: '#ffffff' },
-          hovertemplate: '<b>%{fullData.name}</b><br>t=%{x:.3f} s<br>spread=%{y:.3f}<extra></extra>'
-        });
+        traces.push(makeTrace(
+          standA.shotTimes,
+          standA.preShotSpread,
+          lineMode(),
+          `${weaponA.displayname} Standing`,
+          { color: '#ffffff', width: lineWidth },
+          showMarkers ? { symbol: markerA, size: 7, color: '#ffffff' } : null,
+          '<b>%{fullData.name}</b><br>t=%{x:.3f} s<br>spread=%{y:.3f}<extra></extra>'
+        ));
 
         shifts.forEach((shift, idx) => {
           const moveA = simulateCase(weaponA, 'move', nShots, fps, movingBaselineFromShift(shift));
-          traces.push({
-            x: moveA.shotTimes.slice(1),
-            y: moveA.preShotSpread.slice(1),
-            mode: showMarkers ? 'lines+markers' : 'lines',
-            name: `${weaponA.displayname} Moving ${formatShiftLabel(shift)}`,
-            line: { color: paletteA[idx % paletteA.length], width: lineWidth, dash: 'dash' },
-            marker: { symbol: markerA, size: 7, color: paletteA[idx % paletteA.length] },
-            hovertemplate: '<b>%{fullData.name}</b><br>t=%{x:.3f} s<br>spread=%{y:.3f}<extra></extra>'
-          });
+          traces.push(makeTrace(
+            moveA.shotTimes,
+            moveA.preShotSpread,
+            lineMode(),
+            `${weaponA.displayname} Moving ${formatShiftLabel(shift)}`,
+            { color: getShiftColor(shift, 'A'), width: lineWidth, dash: 'dash' },
+            showMarkers ? { symbol: markerA, size: 7, color: getShiftColor(shift, 'A') } : null,
+            '<b>%{fullData.name}</b><br>t=%{x:.3f} s<br>spread=%{y:.3f}<extra></extra>'
+          ));
         });
 
         if (weaponB) {
           const standB = simulateCase(weaponB, 'stand', nShots, fps, 0.05);
-          traces.push({
-            x: standB.shotTimes.slice(1),
-            y: standB.preShotSpread.slice(1),
-            mode: showMarkers ? 'lines+markers' : 'lines',
-            name: `${weaponB.displayname} Standing`,
-            line: { color: '#999999', width: lineWidth },
-            marker: { symbol: markerB, size: 7, color: '#999999' },
-            hovertemplate: '<b>%{fullData.name}</b><br>t=%{x:.3f} s<br>spread=%{y:.3f}<extra></extra>'
-          });
+          traces.push(makeTrace(
+            standB.shotTimes,
+            standB.preShotSpread,
+            lineMode(),
+            `${weaponB.displayname} Standing`,
+            { color: '#999999', width: lineWidth },
+            showMarkers ? { symbol: markerB, size: 7, color: '#999999' } : null,
+            '<b>%{fullData.name}</b><br>t=%{x:.3f} s<br>spread=%{y:.3f}<extra></extra>'
+          ));
 
           shifts.forEach((shift, idx) => {
             const moveB = simulateCase(weaponB, 'move', nShots, fps, movingBaselineFromShift(shift));
-            traces.push({
-              x: moveB.shotTimes.slice(1),
-              y: moveB.preShotSpread.slice(1),
-              mode: showMarkers ? 'lines+markers' : 'lines',
-              name: `${weaponB.displayname} Moving ${formatShiftLabel(shift)}`,
-              line: { color: paletteB[idx % paletteB.length], width: lineWidth, dash: 'dash' },
-              marker: { symbol: markerB, size: 7, color: paletteB[idx % paletteB.length] },
-              hovertemplate: '<b>%{fullData.name}</b><br>t=%{x:.3f} s<br>spread=%{y:.3f}<extra></extra>'
-            });
+            traces.push(makeTrace(
+              moveB.shotTimes,
+              moveB.preShotSpread,
+              lineMode(),
+              `${weaponB.displayname} Moving ${formatShiftLabel(shift)}`,
+              { color: getShiftColor(shift, 'B'), width: lineWidth, dash: 'dash' },
+              showMarkers ? { symbol: markerB, size: 7, color: getShiftColor(shift, 'B') } : null,
+              '<b>%{fullData.name}</b><br>t=%{x:.3f} s<br>spread=%{y:.3f}<extra></extra>'
+            ));
           });
         }
       }
@@ -488,13 +795,17 @@
             ? (weaponB
                 ? `${weaponA.displayname} vs ${weaponB.displayname} — Effective Spread Increase per Shot`
                 : `${weaponA.displayname} — Effective Spread Increase per Shot`)
-            : (weaponB
-                ? `${weaponA.displayname} vs ${weaponB.displayname} — ADS Spread at Shot Instants (Pre-Shot)`
-                : `${weaponA.displayname} — ADS Spread at Shot Instants (Pre-Shot)`),
+            : useBurstCompare
+              ? (weaponB
+                  ? `${weaponA.displayname} vs ${weaponB.displayname} — ADS Spread at Shot Instants (Burst vs Full Auto)`
+                  : `${weaponA.displayname} — ADS Spread at Shot Instants (Burst vs Full Auto)`)
+              : (weaponB
+                  ? `${weaponA.displayname} vs ${weaponB.displayname} — ADS Spread at Shot Instants (Pre-Shot)`
+                  : `${weaponA.displayname} — ADS Spread at Shot Instants (Pre-Shot)`),
           font: { size: 22 }
         },
         xaxis: {
-          title: 'Time Spent Full-Auto (Seconds)',
+          title: useBurstCompare ? 'Time (s)' : 'Time Spent Full-Auto (Seconds)',
           gridcolor: '#2a3765',
           zerolinecolor: '#2a3765'
         },
@@ -518,7 +829,11 @@
 
       Plotly.newPlot('plot', traces, layout, {responsive: true, displaylogo: false});
 
-      const baseA = simulateCase(weaponA, 'move', nShots, fps, movingBaselineFromShift(0));
+      const statsRefShots = useBurstCompare
+        ? Math.max(1, Math.round(Number(shotsPerBurstEl.value) || 2)) * Math.max(1, Math.round(Number(shotsInputEl.value) || 25))
+        : nShots;
+
+      const baseA = simulateCase(weaponA, 'move', statsRefShots, fps, movingBaselineFromShift(0));
       const effA = baseA.effectiveSpreadIncrease;
       const effA1 = effA.length > 1 ? effA[1] : 0;
       const effALast = effA.length > 0 ? effA[effA.length - 1] : 0;
@@ -530,7 +845,7 @@
         </div>
         <div class="stat">
           <div class="k">Shots</div>
-          <div class="v">${nShots}</div>
+          <div class="v">${statsRefShots}</div>
         </div>
         <div class="stat">
           <div class="k">${weaponA.displayname} Base Effective Δ (Shot 2)</div>
@@ -543,7 +858,7 @@
       `;
 
       if (weaponB) {
-        const baseB = simulateCase(weaponB, 'move', nShots, fps, movingBaselineFromShift(0));
+        const baseB = simulateCase(weaponB, 'move', statsRefShots, fps, movingBaselineFromShift(0));
         const effB = baseB.effectiveSpreadIncrease;
         const effB1 = effB.length > 1 ? effB[1] : 0;
         const effBLast = effB.length > 0 ? effB[effB.length - 1] : 0;
@@ -567,11 +882,25 @@
 
     populateWeaponDropdowns();
     populateTierChecks();
+    setSelectedShifts([0]);
+    enableWeaponBEl.checked = false;
+    shotsPerBurstEl.value = 2;
+    waitSliderEl.value = 0.04;
+    waitValueEl.textContent = Number(waitSliderEl.value).toFixed(2);
+    updateBurstControlsVisibility();
     update();
 
-    [weaponAEl, weaponBEl, enableWeaponBEl, shotsInputEl, showMarkersEl, showEffectiveOverlayEl].forEach(el => {
+    [weaponAEl, weaponBEl, enableWeaponBEl, shotsInputEl, showMarkersEl, showEffectiveOverlayEl,
+     enableBurstCompareEl, shotsPerBurstEl, waitSliderEl].forEach(el => {
       el.addEventListener('input', update);
       el.addEventListener('change', update);
+    });
+    enableBurstCompareEl.addEventListener('change', () => {
+      if (enableBurstCompareEl.checked) {
+        enableWeaponBEl.checked = false;
+        setSelectedShifts([0]);
+      }
+      update();
     });
     tierContainerEl.addEventListener('input', update);
   </script>
